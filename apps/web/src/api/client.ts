@@ -25,20 +25,67 @@ export class ApiError extends Error {
   }
 }
 
+const TOKEN_STORAGE_KEY = 'northwind_auth_token';
+
+let unauthorizedHandler: (() => void) | null = null;
+
+/**
+ * Registers a callback invoked whenever an authenticated API call returns HTTP 401.
+ */
+export function onUnauthorized(handler: (() => void) | null): void {
+  unauthorizedHandler = handler;
+}
+
+/**
+ * Retrieves the stored JWT token.
+ * Note on storage: Token is held in localStorage to persist sessions across page reloads.
+ * Trade-off: Vulnerable to XSS token theft if arbitrary JS executes; mitigated by strict input
+ * sanitization and not executing untrusted user content.
+ */
+export function getStoredToken(): string | null {
+  try {
+    return localStorage.getItem(TOKEN_STORAGE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+/** Stores or removes the JWT token from browser local storage. */
+export function setStoredToken(token: string | null): void {
+  try {
+    if (token) {
+      localStorage.setItem(TOKEN_STORAGE_KEY, token);
+    } else {
+      localStorage.removeItem(TOKEN_STORAGE_KEY);
+    }
+  } catch {
+    // Ignore storage exceptions in constrained environments
+  }
+}
+
 /**
  * The single place that talks to the API. Returns parsed JSON, or throws an
  * {@link ApiError} that callers can show to the user.
  */
 export async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const token = getStoredToken();
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...((init?.headers as Record<string, string>) ?? {}),
+  };
+
   const response = await fetch(`${baseUrl}${path}`, {
     ...init,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(init?.headers ?? {}),
-    },
+    headers,
   });
 
   if (!response.ok) {
+    if (response.status === 401 && !path.includes('/auth/login')) {
+      setStoredToken(null);
+      unauthorizedHandler?.();
+    }
+
     const problem = await readProblem(response);
 
     throw new ApiError(

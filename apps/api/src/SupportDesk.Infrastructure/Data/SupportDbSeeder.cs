@@ -17,7 +17,11 @@ namespace SupportDesk.Infrastructure.Data;
 /// Every aggregate is built through its own behaviour. The two historical values no behaviour
 /// produces - a ticket's last update and its due date - are set through EF Core directly.
 /// </remarks>
-public sealed class SupportDbSeeder(SupportDbContext db, IClock clock, ILogger<SupportDbSeeder> logger)
+public sealed class SupportDbSeeder(
+    SupportDbContext db,
+    IClock clock,
+    IPasswordHasher passwordHasher,
+    ILogger<SupportDbSeeder> logger)
 {
     /// <summary>Seeds the database, unless it already has tickets in it.</summary>
     public async Task SeedAsync(CancellationToken ct = default)
@@ -32,7 +36,7 @@ public sealed class SupportDbSeeder(SupportDbContext db, IClock clock, ILogger<S
 
         var categories = SeedCategories();
         var customers = SeedCustomers(now);
-        var agents = SeedAgents(now);
+        var agents = SeedAgents(now, passwordHasher);
 
         db.AddRange(categories);
         db.AddRange(customers);
@@ -69,20 +73,30 @@ public sealed class SupportDbSeeder(SupportDbContext db, IClock clock, ILogger<S
         new("Wide World Importers", "support@wideworld.example", "+65 6555 0106", CustomerTier.Premium, now.AddDays(-90))
     ];
 
-    private static List<Agent> SeedAgents(DateTime now)
+    private static List<Agent> SeedAgents(DateTime now, IPasswordHasher passwordHasher)
     {
+        var defaultPasswordHash = passwordHasher.HashPassword("Password123!");
+
         var yuki = new Agent("Yuki Tanaka", "yuki.tanaka@northwind-support.example", 8, now.AddDays(-600));
+        yuki.SetPasswordHash(defaultPasswordHash);
         yuki.Deactivate();
 
-        return
-        [
-            new("Alex Turner", "alex.turner@northwind-support.example", 10, now.AddDays(-500)),
-            new("Ben Osei", "ben.osei@northwind-support.example", 8, now.AddDays(-460)),
-            new("Priya Nair", "priya.nair@northwind-support.example", 8, now.AddDays(-400)),
-            new("Sara Lindqvist", "sara.lindqvist@northwind-support.example", 6, now.AddDays(-280)),
-            new("Marcus Doyle", "marcus.doyle@northwind-support.example", 6, now.AddDays(-200)),
-            yuki
-        ];
+        var alex = new Agent("Alex Turner", "alex.turner@northwind-support.example", 10, now.AddDays(-500));
+        alex.SetPasswordHash(defaultPasswordHash);
+
+        var ben = new Agent("Ben Osei", "ben.osei@northwind-support.example", 8, now.AddDays(-460));
+        ben.SetPasswordHash(defaultPasswordHash);
+
+        var priya = new Agent("Priya Nair", "priya.nair@northwind-support.example", 8, now.AddDays(-400));
+        priya.SetPasswordHash(defaultPasswordHash);
+
+        var sara = new Agent("Sara Lindqvist", "sara.lindqvist@northwind-support.example", 6, now.AddDays(-280));
+        sara.SetPasswordHash(defaultPasswordHash);
+
+        var marcus = new Agent("Marcus Doyle", "marcus.doyle@northwind-support.example", 6, now.AddDays(-200));
+        marcus.SetPasswordHash(defaultPasswordHash);
+
+        return [alex, ben, priya, sara, marcus, yuki];
     }
 
     /// <summary>

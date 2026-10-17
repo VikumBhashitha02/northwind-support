@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
 using SupportDesk.Application.Contracts.Common;
 using SupportDesk.Application.Contracts.Tickets;
@@ -67,7 +68,18 @@ public sealed class TicketsController : ControllerBase
         [FromServices] EscalateTicketCommandHandler handler,
         CancellationToken ct)
     {
-        var result = await handler.HandleAsync(id, request, ct);
+        var actorName = User.FindFirstValue(System.Security.Claims.ClaimTypes.Name)
+            ?? User.FindFirstValue(System.Security.Claims.ClaimTypes.Email)
+            ?? User.Identity?.Name
+            ?? (!string.IsNullOrWhiteSpace(request.EscalatedBy) ? request.EscalatedBy : null);
+
+        if (string.IsNullOrWhiteSpace(actorName))
+        {
+            throw new SupportDesk.Application.Exceptions.ValidationException("EscalatedBy", "Escalated by actor could not be determined.");
+        }
+
+        var secureRequest = request with { EscalatedBy = actorName };
+        var result = await handler.HandleAsync(id, secureRequest, ct);
         return Ok(result);
     }
 

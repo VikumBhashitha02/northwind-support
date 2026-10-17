@@ -2,6 +2,7 @@ using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
 using SupportDesk.Application.Configuration;
 using SupportDesk.Application.Features.Agents.Queries.GetAgents;
+using SupportDesk.Application.Features.Auth.Commands.Login;
 using SupportDesk.Application.Features.Categories.Queries.GetCategories;
 using SupportDesk.Application.Features.Customers.Queries.GetCustomer;
 using SupportDesk.Application.Features.Customers.Queries.GetCustomers;
@@ -24,7 +25,10 @@ public static class DependencyInjection
     public static IServiceCollection AddApplication(this IServiceCollection services)
     {
         services.AddOptions<SlaOptions>().BindConfiguration(SlaOptions.SectionName);
+        services.AddOptions<JwtOptions>().BindConfiguration(JwtOptions.SectionName);
         services.AddScoped<ITicketTriageService, TicketTriageService>();
+
+        services.AddScoped<LoginCommandHandler>();
 
         services.AddScoped<RaiseTicketCommandHandler>();
         services.AddScoped<ChangeTicketStatusCommandHandler>();
