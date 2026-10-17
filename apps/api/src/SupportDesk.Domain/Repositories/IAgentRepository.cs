@@ -8,4 +8,5 @@ namespace SupportDesk.Domain.Repositories;
 public interface IAgentRepository
 {
     Task<Agent?> GetByIdAsync(int id, CancellationToken ct);
+    Task<IReadOnlyList<Agent>> GetAllActiveWithSpecializationsAsync(CancellationToken ct);
 }

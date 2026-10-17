@@ -3,15 +3,19 @@ import { ErrorMessage } from '../../components/ErrorMessage';
 import { Spinner } from '../../components/Spinner';
 import { useReferenceData } from '../../hooks/useReferenceData';
 import { AssignAgentControl } from './components/AssignAgentControl';
+import { EscalationHistory } from './components/EscalationHistory';
+import { EscalationPanel } from './components/EscalationPanel';
 import { StatusActions } from './components/StatusActions';
 import { TicketSummary } from './components/TicketSummary';
 import { useTicket } from './hooks/useTicket';
+import { useTicketEscalations } from './hooks/useTicketEscalations';
 
 export function TicketDetailPage() {
   const { id } = useParams<{ id: string }>();
   const ticketId = Number(id);
 
   const { data: ticket, isLoading, error, reload, setData } = useTicket(ticketId);
+  const escalations = useTicketEscalations(ticketId);
   const reference = useReferenceData();
 
   if (Number.isNaN(ticketId)) {
@@ -51,6 +55,11 @@ export function TicketDetailPage() {
           </div>
 
           <StatusActions ticket={ticket} onUpdated={setData} />
+
+          <EscalationHistory
+            escalations={escalations.data ?? []}
+            isLoading={escalations.isLoading}
+          />
         </div>
 
         <aside className="detail-layout__side">
@@ -60,6 +69,12 @@ export function TicketDetailPage() {
             ticket={ticket}
             agents={reference.data?.agents ?? []}
             onUpdated={setData}
+          />
+
+          <EscalationPanel
+            ticket={ticket}
+            onUpdated={setData}
+            onEscalated={escalations.reload}
           />
         </aside>
       </div>

@@ -14,6 +14,9 @@ public sealed class TicketRepository(SupportDbContext db) : ITicketRepository
     public Task<Ticket?> GetByIdAsync(int id, CancellationToken ct) =>
         db.Set<Ticket>().FirstOrDefaultAsync(t => t.Id == id, ct);
 
+    public Task<bool> ExistsAsync(int id, CancellationToken ct) =>
+        db.Set<Ticket>().AsNoTracking().AnyAsync(t => t.Id == id, ct);
+
     public async Task<string> NextReferenceAsync(CancellationToken ct)
     {
         // Single-instance application: the highest id so far is good enough. A database
@@ -29,4 +32,17 @@ public sealed class TicketRepository(SupportDbContext db) : ITicketRepository
 
     public async Task AddAsync(Ticket ticket, CancellationToken ct) =>
         await db.Set<Ticket>().AddAsync(ticket, ct);
+
+    public async Task AddEscalationAsync(TicketEscalation escalation, CancellationToken ct) =>
+        await db.Set<TicketEscalation>().AddAsync(escalation, ct);
+
+    public async Task<Dictionary<int, int>> GetOpenTicketCountsByAgentAsync(CancellationToken ct) =>
+        await db.Set<Ticket>()
+            .AsNoTracking()
+            .Where(t => t.AssignedAgentId != null &&
+                        t.Status != TicketStatus.Resolved &&
+                        t.Status != TicketStatus.Closed)
+            .GroupBy(t => t.AssignedAgentId!.Value)
+            .Select(g => new { AgentId = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(x => x.AgentId, x => x.Count, ct);
 }

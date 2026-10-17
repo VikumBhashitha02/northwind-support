@@ -214,6 +214,61 @@ public sealed class TicketQueriesTests : IDisposable
         Assert.Equal("TCK-0005", result.Items[0].Reference);
     }
 
+    [Fact]
+    public async Task GetPagedAsync_FiltersBySlaStatus_NotApplicable()
+    {
+        var query = new TicketQuery { SlaStatus = SlaStatus.NotApplicable };
+
+        var result = await _queries.GetPagedAsync(query, CancellationToken.None);
+
+        Assert.Equal(5, result.TotalCount);
+        Assert.All(result.Items, item => Assert.Equal(SlaStatus.NotApplicable, item.SlaStatus));
+    }
+
+    [Fact]
+    public async Task GetPagedAsync_FiltersBySlaStatus_MetAndBreached()
+    {
+        var now = FixedClock.DefaultNow;
+
+        // Met ticket: resolved within SLA
+        var tMet = Ticket.Raise("TCK-0010", "Met ticket", "Desc", 1, 1, TicketPriority.High, now, now.AddHours(4));
+        tMet.ChangeStatus(TicketStatus.Resolved, now.AddHours(2));
+
+        // Breached ticket: resolved late
+        var tBreached = Ticket.Raise("TCK-0011", "Breached ticket", "Desc", 1, 1, TicketPriority.High, now, now.AddHours(4));
+        tBreached.ChangeStatus(TicketStatus.Resolved, now.AddHours(6));
+
+        _db.Set<Ticket>().AddRange(tMet, tBreached);
+        await _db.SaveChangesAsync();
+
+        var metResult = await _queries.GetPagedAsync(new TicketQuery { SlaStatus = SlaStatus.Met }, CancellationToken.None);
+        Assert.Single(metResult.Items);
+        Assert.Equal("TCK-0010", metResult.Items[0].Reference);
+        Assert.Equal(SlaStatus.Met, metResult.Items[0].SlaStatus);
+
+        var breachedResult = await _queries.GetPagedAsync(new TicketQuery { SlaStatus = SlaStatus.Breached }, CancellationToken.None);
+        Assert.Single(breachedResult.Items);
+        Assert.Equal("TCK-0011", breachedResult.Items[0].Reference);
+        Assert.Equal(SlaStatus.Breached, breachedResult.Items[0].SlaStatus);
+    }
+
+    [Fact]
+    public async Task GetEscalationsAsync_ReturnsNewestFirst()
+    {
+        var now = FixedClock.DefaultNow;
+        var esc1 = new TicketEscalation(1, TicketPriority.Low, TicketPriority.Medium, null, 1, null, now.AddHours(24), "First reason", "Agent A", now);
+        var esc2 = new TicketEscalation(1, TicketPriority.Medium, TicketPriority.High, 1, 1, now.AddHours(24), now.AddHours(32), "Second reason", "Agent B", now.AddHours(1));
+
+        _db.Set<TicketEscalation>().AddRange(esc1, esc2);
+        await _db.SaveChangesAsync();
+
+        var escalations = await _queries.GetEscalationsAsync(1, CancellationToken.None);
+
+        Assert.Equal(2, escalations.Count);
+        Assert.Equal("Second reason", escalations[0].Reason);
+        Assert.Equal("First reason", escalations[1].Reason);
+    }
+
     public void Dispose()
     {
         _db.Dispose();

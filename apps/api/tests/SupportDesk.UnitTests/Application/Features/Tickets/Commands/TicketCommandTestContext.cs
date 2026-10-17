@@ -1,11 +1,16 @@
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using SupportDesk.Application.Abstractions;
+using SupportDesk.Application.Configuration;
 using SupportDesk.Application.Contracts.Tickets;
 using SupportDesk.Application.Features.Tickets.Commands.AssignTicket;
 using SupportDesk.Application.Features.Tickets.Commands.ChangeTicketStatus;
+using SupportDesk.Application.Features.Tickets.Commands.EscalateTicket;
 using SupportDesk.Application.Features.Tickets.Commands.RaiseTicket;
 using SupportDesk.Application.Features.Tickets.Queries.GetTicket;
+using SupportDesk.Application.Features.Tickets.Triage;
 using SupportDesk.Domain.Aggregates.Agents;
+using SupportDesk.Domain.Aggregates.Categories;
 using SupportDesk.Domain.Aggregates.Customers;
 using SupportDesk.Domain.Aggregates.Tickets;
 using SupportDesk.Domain.Repositories;
@@ -23,9 +28,19 @@ internal sealed class TicketCommandTestContext
     {
         Customers.Setup(c => c.ExistsAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
+        Customers.Setup(c => c.GetByIdAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Customer("Contoso Ltd", "support@contoso.example", null, CustomerTier.Standard, Clock.UtcNow));
 
         Categories.Setup(c => c.ExistsAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
+        Categories.Setup(c => c.GetByIdAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Category("General", requiresSpecialist: false, forcesCriticalPriority: false));
+
+        Agents.Setup(a => a.GetAllActiveWithSpecializationsAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Agent>());
+
+        Tickets.Setup(t => t.GetOpenTicketCountsByAgentAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<int, int>());
 
         Tickets.Setup(t => t.NextReferenceAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync("TCK-0041");
@@ -46,8 +61,10 @@ internal sealed class TicketCommandTestContext
 
         var getTicket = new GetTicketQueryHandler(TicketQueries.Object);
 
+        TriageService = new TicketTriageService(Options.Create(SlaConfig));
+
         RaiseTicket = new RaiseTicketCommandHandler(
-            Tickets.Object, Customers.Object, Categories.Object, UnitOfWork.Object, Clock, getTicket,
+            Tickets.Object, Customers.Object, Categories.Object, Agents.Object, TriageService, UnitOfWork.Object, Clock, getTicket,
             NullLogger<RaiseTicketCommandHandler>.Instance);
 
         ChangeTicketStatus = new ChangeTicketStatusCommandHandler(Tickets.Object, UnitOfWork.Object, Clock, getTicket);
@@ -55,7 +72,15 @@ internal sealed class TicketCommandTestContext
         AssignTicket = new AssignTicketCommandHandler(
             Tickets.Object, Agents.Object, UnitOfWork.Object, Clock, getTicket,
             NullLogger<AssignTicketCommandHandler>.Instance);
+
+        EscalateTicket = new EscalateTicketCommandHandler(
+            Tickets.Object, Customers.Object, Categories.Object, Agents.Object, TriageService, UnitOfWork.Object, Clock, getTicket,
+            NullLogger<EscalateTicketCommandHandler>.Instance);
     }
+
+    public SlaOptions SlaConfig { get; } = new();
+
+    public ITicketTriageService TriageService { get; }
 
     public Mock<ITicketRepository> Tickets { get; } = new();
 
@@ -76,6 +101,8 @@ internal sealed class TicketCommandTestContext
     public ChangeTicketStatusCommandHandler ChangeTicketStatus { get; }
 
     public AssignTicketCommandHandler AssignTicket { get; }
+
+    public EscalateTicketCommandHandler EscalateTicket { get; }
 
     /// <summary>The ticket handed to the repository by the last create call.</summary>
     public Ticket? AddedTicket { get; private set; }
