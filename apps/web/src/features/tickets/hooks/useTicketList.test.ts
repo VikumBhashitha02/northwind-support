@@ -51,4 +51,46 @@ describe('useTicketList', () => {
     expect(result.current.isLoading).toBe(false);
     expect(result.current.data?.items).toHaveLength(1);
   });
+
+  it('triggers an immediate request when changing status dropdown (DEFECT-117)', async () => {
+    const { result } = renderHook(() => useTicketList());
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(300);
+    });
+
+    expect(getTickets).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      result.current.updateFilters({ status: 'InProgress' });
+    });
+
+    // An immediate request is dispatched with the selected status
+    expect(getTickets).toHaveBeenCalledTimes(2);
+    expect(getTickets).toHaveBeenLastCalledWith(
+      expect.objectContaining({ status: 'InProgress' }),
+    );
+  });
+
+  it('immediately requests when filters are reset', async () => {
+    const { result } = renderHook(() => useTicketList());
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(300);
+    });
+
+    expect(getTickets).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      result.current.updateFilters({ status: 'InProgress', priority: 'High' });
+    });
+
+    await act(async () => {
+      result.current.resetFilters();
+    });
+
+    expect(getTickets).toHaveBeenLastCalledWith(
+      expect.objectContaining({ status: undefined, priority: undefined, search: '' }),
+    );
+  });
 });
