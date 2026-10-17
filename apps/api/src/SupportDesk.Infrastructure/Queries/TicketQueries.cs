@@ -23,13 +23,12 @@ public sealed class TicketQueries(SupportDbContext db, IClock clock) : ITicketQu
     /// </remarks>
     public async Task<PagedResult<TicketListItemDto>> GetPagedAsync(TicketQuery query, CancellationToken ct)
     {
-        var tickets = TicketsWithLabels();
-
-        var totalCount = await tickets.CountAsync(ct);
-
         var now = clock.UtcNow;
+        var filteredTickets = ApplyFilters(TicketsWithLabels(), query, now);
 
-        var items = await ApplySort(tickets, query)
+        var totalCount = await filteredTickets.CountAsync(ct);
+
+        var items = await ApplySort(filteredTickets, query)
             .Skip((query.Page - 1) * query.PageSize)
             .Take(query.PageSize)
             .Select(x => new TicketListItemDto
@@ -51,6 +50,53 @@ public sealed class TicketQueries(SupportDbContext db, IClock clock) : ITicketQu
             .ToListAsync(ct);
 
         return new PagedResult<TicketListItemDto>(items, query.Page, query.PageSize, totalCount);
+    }
+
+    private static IQueryable<TicketWithLabels> ApplyFilters(
+        IQueryable<TicketWithLabels> source,
+        TicketQuery query,
+        DateTime now)
+    {
+        if (query.Status.HasValue)
+        {
+            source = source.Where(x => x.Ticket.Status == query.Status.Value);
+        }
+
+        if (query.Priority.HasValue)
+        {
+            source = source.Where(x => x.Ticket.Priority == query.Priority.Value);
+        }
+
+        if (query.CategoryId.HasValue)
+        {
+            source = source.Where(x => x.Ticket.CategoryId == query.CategoryId.Value);
+        }
+
+        if (query.CustomerId.HasValue)
+        {
+            source = source.Where(x => x.Ticket.CustomerId == query.CustomerId.Value);
+        }
+
+        if (query.AssignedAgentId.HasValue)
+        {
+            source = source.Where(x => x.Ticket.AssignedAgentId == query.AssignedAgentId.Value);
+        }
+
+        if (query.UnassignedOnly)
+        {
+            source = source.Where(x => x.Ticket.AssignedAgentId == null);
+        }
+
+        if (!string.IsNullOrWhiteSpace(query.Search))
+        {
+            var term = query.Search.Trim();
+            source = source.Where(x =>
+                x.Ticket.Title.Contains(term) ||
+                x.Ticket.Reference.Contains(term) ||
+                x.Customer.Name.Contains(term));
+        }
+
+        return source;
     }
 
     public Task<TicketDetailDto?> GetDetailAsync(int id, CancellationToken ct)
