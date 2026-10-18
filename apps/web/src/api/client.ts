@@ -105,6 +105,9 @@ export async function request<T>(path: string, init?: RequestInit): Promise<T> {
 /** Turns anything thrown by a fetch into a message worth showing a user. */
 export function toErrorMessage(error: unknown, fallback: string): string {
   if (error instanceof ApiError) {
+    if (error.status === 502 || error.message.toLowerCase().includes('bad gateway')) {
+      return 'Unable to reach the backend API server. Please ensure the database (npm run db:up) and API (npm run api) are running.';
+    }
     return error.message;
   }
 
