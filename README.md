@@ -149,12 +149,12 @@ All seeded test agents are initialized with the local password: `Password123!`
 
 | Agent | Email | Role / Specialization | Status |
 | --- | --- | --- | --- |
-| **Alex Morgan** | `alex@northwind.test` | General Support | Active |
-| **Ben Davies** | `ben@northwind.test` | Specialist | Active |
-| **Priya Patel** | `priya@northwind.test` | Specialist | Active |
-| **Sara Conner** | `sara@northwind.test` | General Support | Active |
-| **Marcus Vance** | `marcus@northwind.test` | General Support (At capacity) | Active |
-| **Yuki Tanaka** | `yuki@northwind.test` | General Support | Inactive (Cannot log in) |
+| **Alex Turner** | `alex.turner@northwind-support.example` | General, Technical (5 / 10 open) | Active |
+| **Ben Osei** | `ben.osei@northwind-support.example` | Technical, Outage (3 / 8 open) | Active |
+| **Priya Nair** | `priya.nair@northwind-support.example` | Outage, Security (4 / 8 open) | Active |
+| **Sara Lindqvist** | `sara.lindqvist@northwind-support.example` | General, Billing (2 / 6 open) | Active |
+| **Marcus Doyle** | `marcus.doyle@northwind-support.example` | Billing, Security (6 / 6 open - full) | Active (At capacity) |
+| **Yuki Tanaka** | `yuki.tanaka@northwind-support.example` | Technical (0 / 8 open) | Inactive (Cannot log in) |
 
 ---
 

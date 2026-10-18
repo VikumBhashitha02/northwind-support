@@ -37,6 +37,8 @@ public sealed class JwtTokenGenerator(IOptions<JwtOptions> options, IClock clock
         var tokenDescriptor = new SecurityTokenDescriptor
         {
             Subject = new ClaimsIdentity(claims),
+            NotBefore = now,
+            IssuedAt = now,
             Expires = expiresAtUtc,
             Issuer = _options.Issuer,
             Audience = _options.Audience,

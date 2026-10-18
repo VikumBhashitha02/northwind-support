@@ -25,7 +25,7 @@ public sealed class JwtTokenGeneratorTests
         ExpiryHours = 8
     };
 
-    private readonly FixedClock _clock = new(new DateTime(2026, 10, 18, 12, 0, 0, DateTimeKind.Utc));
+    private readonly FixedClock _clock = new(DateTime.UtcNow);
 
     [Fact]
     public void GenerateToken_ProducesValidJwt_ThatCanBeValidated()

@@ -99,7 +99,7 @@ describe('Authentication & Protected Routes', () => {
       </MemoryRouter>,
     );
 
-    await user.type(screen.getByLabelText(/email address/i), 'alex@northwind.test');
+    await user.type(screen.getByLabelText(/email address/i), 'alex.turner@northwind-support.example');
     await user.type(screen.getByLabelText(/password/i), 'WrongPass');
     await user.click(screen.getByRole('button', { name: /sign in/i }));
 
@@ -116,7 +116,7 @@ describe('Authentication & Protected Routes', () => {
       json: async () => ({
         token: 'new.jwt.token',
         expiresAtUtc: '2026-10-18T12:00:00Z',
-        user: { id: 1, fullName: 'Alex Morgan', email: 'alex@northwind.test' },
+        user: { id: 1, fullName: 'Alex Turner', email: 'alex.turner@northwind-support.example' },
       }),
     });
     vi.stubGlobal('fetch', fetchMock);
@@ -132,7 +132,7 @@ describe('Authentication & Protected Routes', () => {
       </MemoryRouter>,
     );
 
-    await user.type(screen.getByLabelText(/email address/i), 'alex@northwind.test');
+    await user.type(screen.getByLabelText(/email address/i), 'alex.turner@northwind-support.example');
     await user.type(screen.getByLabelText(/password/i), 'Password123!');
     await user.click(screen.getByRole('button', { name: /sign in/i }));
 

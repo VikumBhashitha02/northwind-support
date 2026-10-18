@@ -124,7 +124,7 @@ export function LoginPage() {
 
         <div style={{ marginTop: '24px', paddingTop: '16px', borderTop: '1px solid var(--colour-border)', fontSize: '0.85rem', color: 'var(--colour-muted)' }}>
           <strong>Development Test Account:</strong>
-          <div>Email: <code>alex@northwind.test</code></div>
+          <div>Email: <code>alex.turner@northwind-support.example</code></div>
           <div>Password: <code>Password123!</code></div>
         </div>
       </div>
